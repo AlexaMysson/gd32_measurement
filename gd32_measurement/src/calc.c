@@ -48,7 +48,6 @@ static int extract_positive_crossings(const ZeroCrossing* crossings, int count, 
 
 static float calculate_frequency_exact(const float* pos_times, int pos_count, float* period_out) {
     if (pos_count < 4) return 0.0f;
-    // Берём первый и четвёртый положительный фронт (интервал = 3 периода)
     float interval = pos_times[3] - pos_times[0];
     float period = interval / 3.0f;
     if (period_out) *period_out = period;
@@ -111,7 +110,7 @@ int calc_process_samples(const uint16_t* samples, size_t num, float vref_mv, Cal
 
     ZeroCrossing crossings[50];
     int num_cross = find_zero_crossings(volts, num, crossings, 50);
-    if (num_cross < 8) return -1; // нужно минимум 4 положительных фронта (для 3 периодов)
+    if (num_cross < 8) return -1;
 
     float pos_times[20];
     int pos_count = extract_positive_crossings(crossings, num_cross, pos_times, 20);

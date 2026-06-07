@@ -2,35 +2,60 @@ CC = gcc
 CFLAGS = -Wall -Wextra -Werror -std=c99 -DPLATFORM_HOST -I src -I test/unity
 LDFLAGS = -lm
 
-SRC = src/config.c src/calc.c
-TEST_SRC = test/test_main.c test/test_calc.c test/unity/unity.c
-OBJ_DIR = build
+# Объектные файлы для основной программы
+OBJ_MEASURE = build/config.o build/calc.o build/meas_sim.o build/main.o
 
-TARGET_CONFIG = $(OBJ_DIR)/test_config.exe
-TARGET_CALC   = $(OBJ_DIR)/test_calc.exe
+# Объектные файлы для тестов
+OBJ_TEST_CONFIG = build/config.o build/test_main.o
+OBJ_TEST_CALC   = build/calc.o build/config.o build/test_calc.o build/unity.o
 
-all: $(TARGET_CONFIG) $(TARGET_CALC)
+# Исполняемые файлы
+TARGET_MEASURE = build/measure.exe
+TARGET_CONFIG  = build/test_config.exe
+TARGET_CALC    = build/test_calc.exe
 
-$(TARGET_CONFIG): $(OBJ_DIR)/config.o $(OBJ_DIR)/test_main.o | $(OBJ_DIR)
-	$(CC) $^ -o $@
+all: $(TARGET_MEASURE) $(TARGET_CONFIG) $(TARGET_CALC)
 
-$(TARGET_CALC): $(OBJ_DIR)/calc.o $(OBJ_DIR)/config.o $(OBJ_DIR)/test_calc.o $(OBJ_DIR)/unity.o | $(OBJ_DIR)
+# Основная программа
+$(TARGET_MEASURE): $(OBJ_MEASURE) | build
 	$(CC) $^ $(LDFLAGS) -o $@
 
-$(OBJ_DIR)/%.o: src/%.c | $(OBJ_DIR)
+# Тест конфигурации
+$(TARGET_CONFIG): $(OBJ_TEST_CONFIG) | build
+	$(CC) $^ -o $@
+
+# Тест расчётов
+$(TARGET_CALC): $(OBJ_TEST_CALC) | build
+	$(CC) $^ $(LDFLAGS) -o $@
+
+# Правила для компиляции объектных файлов из src/
+build/config.o: src/config.c | build
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(OBJ_DIR)/test_main.o: test/test_main.c | $(OBJ_DIR)
+build/calc.o: src/calc.c | build
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(OBJ_DIR)/test_calc.o: test/test_calc.c | $(OBJ_DIR)
+build/meas_sim.o: src/meas_sim.c | build
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(OBJ_DIR)/unity.o: test/unity/unity.c | $(OBJ_DIR)
+build/main.o: src/main.c | build
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(OBJ_DIR):
-	mkdir -p $(OBJ_DIR)
+# Правила для тестовых объектных файлов
+build/test_main.o: test/test_main.c | build
+	$(CC) $(CFLAGS) -c $< -o $@
+
+build/test_calc.o: test/test_calc.c | build
+	$(CC) $(CFLAGS) -c $< -o $@
+
+build/unity.o: test/unity/unity.c | build
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Создание папки build
+build:
+	mkdir -p build
 
 clean:
-	rm -rf $(OBJ_DIR)
+	rm -rf build
+
+.PHONY: all clean
