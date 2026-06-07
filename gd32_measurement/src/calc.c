@@ -9,6 +9,7 @@
 
 #define FS 19200.0f
 #define DC_OFFSET_V 1.65f
+#define MAX_SAMPLES 4096   
 
 static float adc_to_volts(uint16_t adc_value, float vref_mv) {
     float volts = (adc_value * vref_mv / 4095.0f) / 1000.0f;
@@ -16,8 +17,8 @@ static float adc_to_volts(uint16_t adc_value, float vref_mv) {
 }
 
 typedef struct {
-    float time;      
-    int direction;   
+    float time;
+    int direction;
 } ZeroCrossing;
 
 static int find_zero_crossings(const float* signal, size_t n, ZeroCrossing* crossings, int max_crossings) {
@@ -36,6 +37,7 @@ static int find_zero_crossings(const float* signal, size_t n, ZeroCrossing* cros
     }
     return count;
 }
+
 static int extract_positive_crossings(const ZeroCrossing* crossings, int count, float* pos_times, int max_pos) {
     int pos_count = 0;
     for (int i = 0; i < count && pos_count < max_pos; i++) {
@@ -57,9 +59,11 @@ static float calculate_frequency_exact(const float* pos_times, int pos_count, fl
 static float calculate_rms_on_interval(const float* signal, size_t n, float t_start, float t_end) {
     int idx_start = (int)(t_start * FS + 0.5f);
     int idx_end = (int)(t_end * FS + 0.5f);
+    // Безопасные границы
     if (idx_start < 0) idx_start = 0;
+    if (idx_start >= (int)n) idx_start = n - 1;
+    if (idx_end <= idx_start) idx_end = idx_start + 1;
     if (idx_end > (int)n) idx_end = n;
-    if (idx_end <= idx_start) return 0.0f;
 
     double sum_sq = 0.0;
     for (int i = idx_start; i < idx_end; i++) {
@@ -72,6 +76,8 @@ static float calculate_first_harmonic_on_interval(const float* signal, size_t n,
     int idx_start = (int)(t_start * FS + 0.5f);
     int idx_end = (int)(t_end * FS + 0.5f);
     if (idx_start < 0) idx_start = 0;
+    if (idx_start >= (int)n) idx_start = n - 1;
+    if (idx_end <= idx_start) idx_end = idx_start + 1;
     if (idx_end > (int)n) idx_end = n;
     if (idx_end - idx_start < 4) return 0.0f;
 
@@ -86,7 +92,7 @@ static float calculate_first_harmonic_on_interval(const float* signal, size_t n,
 }
 
 static float calculate_df_dt_exact(const float* pos_times, int pos_count) {
-    if (pos_count < 7) return 0.0f; 
+    if (pos_count < 7) return 0.0f;
     float period1 = (pos_times[3] - pos_times[0]) / 3.0f;
     float freq1 = 1.0f / period1;
     float period2 = (pos_times[pos_count - 1] - pos_times[pos_count - 4]) / 3.0f;
@@ -101,9 +107,9 @@ static float calculate_df_dt_exact(const float* pos_times, int pos_count) {
 
 int calc_process_samples(const uint16_t* samples, size_t num, float vref_mv, CalcResult* result) {
     memset(result, 0, sizeof(CalcResult));
-    if (num < 100) return -1;
+    if (num < 100 || num > MAX_SAMPLES) return -1; 
 
-    float volts[num];
+    static float volts[MAX_SAMPLES];
     for (size_t i = 0; i < num; i++) {
         volts[i] = adc_to_volts(samples[i], vref_mv);
     }
@@ -127,8 +133,8 @@ int calc_process_samples(const uint16_t* samples, size_t num, float vref_mv, Cal
         result->rms = 0.0f;
     }
 
-    if (pos_count >= 2) {
-        result->first_harmonic_amp = calculate_first_harmonic_on_interval(volts, num, pos_times[0], pos_times[1]);
+    if (pos_count >= 4) {
+        result->first_harmonic_amp = calculate_first_harmonic_on_interval(volts, num, pos_times[0], pos_times[3]);
     }
     else {
         result->first_harmonic_amp = 0.0f;

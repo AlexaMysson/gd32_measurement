@@ -1,7 +1,6 @@
 #include "config.h"
 #include <string.h>
 
-
 #ifdef PLATFORM_HOST
 static uint8_t emulated_flash[1024];
 #define CONFIG_FLASH_ADDR   emulated_flash
@@ -9,9 +8,8 @@ static uint8_t emulated_flash[1024];
 #define FLASH_WRITE(addr, data, size)   memcpy((void*)(addr), (data), (size))
 #define FLASH_READ(addr, data, size)    memcpy((data), (const void*)(addr), (size))
 #else
-
-#include "gd32f4xx.h"          
-#define CONFIG_FLASH_ADDR   (0x0807F800UL)   
+#include "gd32f4xx.h"
+#define CONFIG_FLASH_ADDR   (0x0807F800UL)
 static void flash_erase(void) {
     fmc_unlock();
     fmc_page_erase(CONFIG_FLASH_ADDR);
@@ -21,7 +19,7 @@ static void flash_write(const void* data, size_t size) {
     const uint32_t* src = (const uint32_t*)data;
     size_t words = size / 4;
     fmc_unlock();
-    fmc_page_erase(CONFIG_FLASH_ADDR);
+    fmc_page_erase(CONFIG_FLASH_ADDR); 
     for (size_t i = 0; i < words; i++) {
         fmc_word_program(CONFIG_FLASH_ADDR + i * 4, src[i]);
     }
@@ -35,7 +33,6 @@ static void flash_read(void* data, size_t size) {
 #define FLASH_WRITE(addr, data, size)   flash_write((data), (size))
 #define FLASH_READ(addr, data, size)    flash_read((data), (size))
 #endif
-
 
 static const SystemConfig default_config = {
     .rms_periods = 1,
@@ -74,6 +71,7 @@ static int load_from_flash(SystemConfig* cfg) {
 }
 
 static void save_to_flash(const SystemConfig* cfg) {
+    FLASH_ERASE();   
     FLASH_WRITE(CONFIG_FLASH_ADDR, cfg, sizeof(SystemConfig));
 }
 

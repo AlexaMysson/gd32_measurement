@@ -1,10 +1,7 @@
+
 #include "meas.h"
 #include <math.h>
 #include <stdio.h>
-
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
 
 #define BUFFER_SIZE 2048
 #define FS 19200.0f
@@ -40,7 +37,7 @@ const uint16_t* meas_get_current_buffer(size_t* len) {
     if (!buffer_ready) {
         for (size_t i = 0; i < BUFFER_SIZE; i++) {
             double t = (sample_index + i) / FS;
-            double v = signal_amp * sin(2.0 * M_PI * signal_freq * t);
+            double v = signal_amp * sin(2.0 * 3.1415926535 * signal_freq * t);
             double adc_v = v + DC_OFFSET_V;
             int code = (int)(adc_v * 4095.0 / (VREF_MV / 1000.0));
             if (code < 0) code = 0;
